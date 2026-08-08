@@ -336,90 +336,328 @@ void AudioFilterOBXa::setEnvValue(float env01)
 }
 
 
+// void AudioFilterOBXa::update(void)
+// {
+//     audio_block_t *in0 = receiveReadOnly(0);
+//     audio_block_t *in1 = receiveReadOnly(1); // cutoff mod bus
+//     audio_block_t *in2 = receiveReadOnly(2); // resonance mod bus
+
+//     audio_block_t *out = allocate();
+//     if (!out)
+//     {
+//         // Release any inputs we received
+//         if (in0) release(in0);
+//         if (in1) release(in1);
+//         if (in2) release(in2);
+//         return;
+//     }
+
+//     // If we recently had a reset, optionally mute a couple blocks to avoid thumps
+//     if (_cooldownBlocks > 0) _cooldownBlocks--;
+
+//     // Precompute keytrack factor (control-rate)
+//     // note=60 => 1.0; note+12 => x2; note-12 => x0.5
+//     float keyOct = (_midiNote - 60.0f) / 12.0f;
+//     float keyMul = powf(2.0f, _keyTrack * keyOct);
+
+//     for (int i = 0; i < AUDIO_BLOCK_SAMPLES; ++i)
+//     {
+//         // *** KEY CHANGE: Use 0.0f if no input, allowing self-oscillation ***
+//         float x = in0 ? ((float)in0->data[i] * (1.0f / 32768.0f)) : 0.0f;
+
+//         // Audio-rate mods
+//         float cutMod = in1 ? ((float)in1->data[i] * (1.0f / 32768.0f)) : 0.0f;  // -1..+1
+//         float resMod = in2 ? ((float)in2->data[i] * (1.0f / 32768.0f)) : 0.0f;  // -1..+1
+
+//         // Convert cutoff mods to a multiplier in octaves:
+//         float modOct = (cutMod * _cutoffModOct) + (_envValue * _envModOct);
+//         float modMul = powf(2.0f, modOct);
+
+//         float cutoffHz = _cutoffHzTarget * keyMul * modMul;
+
+//         // Keep stable
+//         float maxHz = 0.24f * AUDIO_SAMPLE_RATE_EXACT;
+//         if (cutoffHz < 5.0f) cutoffHz = 5.0f;
+//         if (cutoffHz > maxHz) cutoffHz = maxHz;
+
+//         // Resonance (0..1) plus optional audio-rate modulation depth
+//         float r01 = _res01Target + (resMod * _resModDepth);
+//         if (r01 < 0.0f) r01 = 0.0f;
+//         if (r01 > 1.0f) r01 = 1.0f;
+//         _core->setResonance(r01);
+
+//         float y = 0.0f;
+
+//         if (_cooldownBlocks > 0)
+//         {
+//             y = 0.0f;
+//         }
+//         else if (_useTwoPole)
+//         {
+//             _core->bpBlend2Pole = _bpBlend2Pole;
+//             _core->push2Pole = _push2Pole;
+//             y = _core->process2Pole(x, cutoffHz);
+//         }
+//         else
+//         {
+//             _core->xpander4Pole = _xpander4Pole;
+//             _core->xpanderMode = _xpanderMode;
+//             y = _core->process4Pole(x, cutoffHz);
+//         }
+
+// #if OBXA_STATE_GUARD
+//         // Recovery: if output goes non-finite or runaway, reset and cool down.
+//         if (!isfinite(y) || obxa_is_huge(y) ||
+//             obxa_is_huge(_core->state.pole1) || obxa_is_huge(_core->state.pole2) ||
+//             obxa_is_huge(_core->state.pole3) || obxa_is_huge(_core->state.pole4))
+//         {
+//             _core->reset();
+//             _cooldownBlocks = 2; // mute 2 blocks after reset
+//             y = 0.0f;
+// #if OBXA_DEBUG
+//             // allow a new fault to be captured after recovery
+//             _faultLatched = false;
+// #endif
+//         }
+// #endif
+
+//         if (y > 1.0f) y = 1.0f;
+//         if (y < -1.0f) y = -1.0f;
+
+//         out->data[i] = (int16_t)(y * 32767.0f);
+//     }
+
+//     transmit(out);
+
+//     release(out);
+//     if (in0) release(in0);
+//     if (in1) release(in1);
+//     if (in2) release(in2);
+// }
+
+// void AudioFilterOBXa::update(void)
+// {
+//     audio_block_t *in0 = receiveReadOnly(0);
+//     audio_block_t *in1 = receiveReadOnly(1); // cutoff mod bus
+//     audio_block_t *in2 = receiveReadOnly(2); // resonance mod bus
+
+//     audio_block_t *out = allocate();
+//     if (!out)
+//     {
+//         if (in0) release(in0);
+//         if (in1) release(in1);
+//         if (in2) release(in2);
+//         return;
+//     }
+
+//     // --- CLEAN BYPASS ---
+//     for (int i = 0; i < AUDIO_BLOCK_SAMPLES; ++i)
+//     {
+//         // Pass audio straight through if the block exists, otherwise silence
+//         out->data[i] = in0 ? in0->data[i] : 0;
+//     }
+
+//     // Transmit and release resources immediately
+//     transmit(out);
+//     release(out);
+
+//     if (in0) release(in0);
+//     if (in1) release(in1);
+//     if (in2) release(in2);
+//     return; 
+//     // ---------------------
+
+//     // If we recently had a reset, optionally mute a couple blocks to avoid thumps
+//     if (_cooldownBlocks > 0) _cooldownBlocks--;
+
+//     // Precompute keytrack factor (control-rate)
+//     // note=60 => 1.0; note+12 => x2; note-12 => x0.5
+//     float keyOct = (_midiNote - 60.0f) / 12.0f;
+//     float keyMul = powf(2.0f, _keyTrack * keyOct);
+
+//     for (int i = 0; i < AUDIO_BLOCK_SAMPLES; ++i)
+//     {
+//         // *** KEY CHANGE: Use 0.0f if no input, allowing self-oscillation ***
+//         float x = in0 ? ((float)in0->data[i] * (1.0f / 32768.0f)) : 0.0f;
+
+//         // Audio-rate mods
+//         float cutMod = in1 ? ((float)in1->data[i] * (1.0f / 32768.0f)) : 0.0f;  // -1..+1
+//         float resMod = in2 ? ((float)in2->data[i] * (1.0f / 32768.0f)) : 0.0f;  // -1..+1
+
+//         // Convert cutoff mods to a multiplier in octaves:
+//         float modOct = (cutMod * _cutoffModOct) + (_envValue * _envModOct);
+//         float modMul = powf(2.0f, modOct);
+
+//         float cutoffHz = _cutoffHzTarget * keyMul * modMul;
+
+//         // Keep stable
+//         float maxHz = 0.24f * AUDIO_SAMPLE_RATE_EXACT;
+//         if (cutoffHz < 5.0f) cutoffHz = 5.0f;
+//         if (cutoffHz > maxHz) cutoffHz = maxHz;
+
+//         // Resonance (0..1) plus optional audio-rate modulation depth
+//         float r01 = _res01Target + (resMod * _resModDepth);
+//         if (r01 < 0.0f) r01 = 0.0f;
+//         if (r01 > 1.0f) r01 = 1.0f;
+//         _core->setResonance(r01);
+
+//         float y = 0.0f;
+
+//         if (_cooldownBlocks > 0)
+//         {
+//             y = 0.0f;
+//         }
+//         else if (_useTwoPole)
+//         {
+//             _core->bpBlend2Pole = _bpBlend2Pole;
+//             _core->push2Pole = _push2Pole;
+//             y = _core->process2Pole(x, cutoffHz);
+//         }
+//         else
+//         {
+//             _core->xpander4Pole = _xpander4Pole;
+//             _core->xpanderMode = _xpanderMode;
+//             y = _core->process4Pole(x, cutoffHz);
+//         }
+
+// #if OBXA_STATE_GUARD
+//         // Recovery: if output goes non-finite or runaway, reset and cool down.
+//         if (!isfinite(y) || obxa_is_huge(y) ||
+//             obxa_is_huge(_core->state.pole1) || obxa_is_huge(_core->state.pole2) ||
+//             obxa_is_huge(_core->state.pole3) || obxa_is_huge(_core->state.pole4))
+//         {
+//             _core->reset();
+//             _cooldownBlocks = 2; // mute 2 blocks after reset
+//             y = 0.0f;
+// #if OBXA_DEBUG
+//             // allow a new fault to be captured after recovery
+//             _faultLatched = false;
+// #endif
+//         }
+// #endif
+
+//         if (y > 1.0f) y = 1.0f;
+//         if (y < -1.0f) y = -1.0f;
+
+//         out->data[i] = (int16_t)(y * 32767.0f);
+//     }
+
+//     transmit(out);
+
+//     release(out);
+//     if (in0) release(in0);
+//     if (in1) release(in1);
+//     if (in2) release(in2);
+// }
+
+
+// void AudioFilterOBXa::update(void)
+// {
+//     audio_block_t *in0 = receiveReadOnly(0);
+//     audio_block_t *in1 = receiveReadOnly(1); // cutoff mod bus
+//     audio_block_t *in2 = receiveReadOnly(2); // resonance mod bus
+
+//     audio_block_t *out = allocate();
+//     if (!out)
+//     {
+//         if (in0) release(in0);
+//         if (in1) release(in1);
+//         if (in2) release(in2);
+//         return;
+//     }
+
+//     if (_cooldownBlocks > 0) _cooldownBlocks--;
+
+//     float keyOct = (_midiNote - 60.0f) / 12.0f;
+//     float keyMul = powf(2.0f, _keyTrack * keyOct);
+    
+//     float baseEnvOct = (_envValue * _envModOct);
+//     float baseCutoffHz = _cutoffHzTarget * keyMul * powf(2.0f, baseEnvOct);
+
+//     float maxHz = 0.24f * AUDIO_SAMPLE_RATE_EXACT;
+
+//     for (int i = 0; i < AUDIO_BLOCK_SAMPLES; ++i)
+//     {
+//         float x = in0 ? ((float)in0->data[i] * (1.0f / 32768.0f)) : 0.0f;
+//         float cutMod = in1 ? ((float)in1->data[i] * (1.0f / 32768.0f)) : 0.0f;
+//         float resMod = in2 ? ((float)in2->data[i] * (1.0f / 32768.0f)) : 0.0f;
+
+//         float modOct = cutMod * _cutoffModOct;
+//         float cutoffHz = baseCutoffHz * powf(2.0f, modOct);
+
+//         if (cutoffHz < 5.0f) cutoffHz = 5.0f;
+//         if (cutoffHz > maxHz) cutoffHz = maxHz;
+
+//         float r01 = _res01Target + (resMod * _resModDepth);
+//         if (r01 < 0.0f) r01 = 0.0f;
+//         if (r01 > 1.0f) r01 = 1.0f;
+//         _core->setResonance(r01);
+
+//         float y = 0.0f;
+
+//         if (_cooldownBlocks > 0)
+//         {
+//             y = 0.0f;
+//         }
+//         else if (_useTwoPole)
+//         {
+//             _core->bpBlend2Pole = _bpBlend2Pole;
+//             _core->push2Pole = _push2Pole;
+//             y = _core->process2Pole(x, cutoffHz);
+//         }
+//         else
+//         {
+//             _core->xpander4Pole = _xpander4Pole;
+//             _core->xpanderMode = _xpanderMode;
+//             y = _core->process4Pole(x, cutoffHz);
+//         }
+
+// #if OBXA_STATE_GUARD
+//         if (!isfinite(y) || obxa_is_huge(y) ||
+//             obxa_is_huge(_core->state.pole1) || obxa_is_huge(_core->state.pole2) ||
+//             obxa_is_huge(_core->state.pole3) || obxa_is_huge(_core->state.pole4))
+//         {
+//             _core->reset();
+//             _cooldownBlocks = 2;
+//             y = 0.0f;
+// #if OBXA_DEBUG
+//             _faultLatched = false;
+// #endif
+//         }
+// #endif
+
+//         if (y > 1.0f) y = 1.0f;
+//         if (y < -1.0f) y = -1.0f;
+
+//         out->data[i] = (int16_t)(y * 32767.0f);
+//     }
+
+//     transmit(out);
+//     release(out);
+//     if (in0) release(in0);
+//     if (in1) release(in1);
+//     if (in2) release(in2);
+// }
 void AudioFilterOBXa::update(void)
 {
     audio_block_t *in0 = receiveReadOnly(0);
-    audio_block_t *in1 = receiveReadOnly(1); // cutoff mod bus
-    audio_block_t *in2 = receiveReadOnly(2); // resonance mod bus
+    audio_block_t *in1 = receiveReadOnly(1);
+    audio_block_t *in2 = receiveReadOnly(2);
 
     audio_block_t *out = allocate();
     if (!out)
     {
-        // Release any inputs we received
         if (in0) release(in0);
         if (in1) release(in1);
         if (in2) release(in2);
         return;
     }
 
-    // If we recently had a reset, optionally mute a couple blocks to avoid thumps
-    if (_cooldownBlocks > 0) _cooldownBlocks--;
-
-    // Precompute keytrack factor (control-rate)
-    // note=60 => 1.0; note+12 => x2; note-12 => x0.5
-    float keyOct = (_midiNote - 60.0f) / 12.0f;
-    float keyMul = powf(2.0f, _keyTrack * keyOct);
-
     for (int i = 0; i < AUDIO_BLOCK_SAMPLES; ++i)
     {
-        // *** KEY CHANGE: Use 0.0f if no input, allowing self-oscillation ***
         float x = in0 ? ((float)in0->data[i] * (1.0f / 32768.0f)) : 0.0f;
-
-        // Audio-rate mods
-        float cutMod = in1 ? ((float)in1->data[i] * (1.0f / 32768.0f)) : 0.0f;  // -1..+1
-        float resMod = in2 ? ((float)in2->data[i] * (1.0f / 32768.0f)) : 0.0f;  // -1..+1
-
-        // Convert cutoff mods to a multiplier in octaves:
-        float modOct = (cutMod * _cutoffModOct) + (_envValue * _envModOct);
-        float modMul = powf(2.0f, modOct);
-
-        float cutoffHz = _cutoffHzTarget * keyMul * modMul;
-
-        // Keep stable
-        float maxHz = 0.24f * AUDIO_SAMPLE_RATE_EXACT;
-        if (cutoffHz < 5.0f) cutoffHz = 5.0f;
-        if (cutoffHz > maxHz) cutoffHz = maxHz;
-
-        // Resonance (0..1) plus optional audio-rate modulation depth
-        float r01 = _res01Target + (resMod * _resModDepth);
-        if (r01 < 0.0f) r01 = 0.0f;
-        if (r01 > 1.0f) r01 = 1.0f;
-        _core->setResonance(r01);
-
-        float y = 0.0f;
-
-        if (_cooldownBlocks > 0)
-        {
-            y = 0.0f;
-        }
-        else if (_useTwoPole)
-        {
-            _core->bpBlend2Pole = _bpBlend2Pole;
-            _core->push2Pole = _push2Pole;
-            y = _core->process2Pole(x, cutoffHz);
-        }
-        else
-        {
-            _core->xpander4Pole = _xpander4Pole;
-            _core->xpanderMode = _xpanderMode;
-            y = _core->process4Pole(x, cutoffHz);
-        }
-
-#if OBXA_STATE_GUARD
-        // Recovery: if output goes non-finite or runaway, reset and cool down.
-        if (!isfinite(y) || obxa_is_huge(y) ||
-            obxa_is_huge(_core->state.pole1) || obxa_is_huge(_core->state.pole2) ||
-            obxa_is_huge(_core->state.pole3) || obxa_is_huge(_core->state.pole4))
-        {
-            _core->reset();
-            _cooldownBlocks = 2; // mute 2 blocks after reset
-            y = 0.0f;
-#if OBXA_DEBUG
-            // allow a new fault to be captured after recovery
-            _faultLatched = false;
-#endif
-        }
-#endif
+        
+        float y = x;
 
         if (y > 1.0f) y = 1.0f;
         if (y < -1.0f) y = -1.0f;
@@ -428,9 +666,9 @@ void AudioFilterOBXa::update(void)
     }
 
     transmit(out);
-
     release(out);
     if (in0) release(in0);
     if (in1) release(in1);
     if (in2) release(in2);
 }
+

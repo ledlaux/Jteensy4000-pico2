@@ -2,103 +2,53 @@
 
 // --- Lifecycle
 void EnvelopeBlock::noteOn() {
-    // _stage = ATTACK;
-    // calculateRates();
-    // _lastUpdateMicros = micros();
     _envelope.noteOn();
 }
 
 void EnvelopeBlock::noteOff() {
-    // _stage = RELEASE;
-    // calculateRates();
-    // _lastUpdateMicros = micros();
     _envelope.noteOff();
 }
 
-// void EnvelopeBlock::update() {
-//     unsigned long now = micros();
-//     float deltaTime = (now - _lastUpdateMicros) / 1e6f;
-//     _lastUpdateMicros = now;
-
-//     switch (_stage) {
-//         case ATTACK:
-//             if (_attackTime > 0){
-//             _value += deltaTime / _attackTime;
-//                 if (_value >= 1.0f) {
-//                     _value = 1.0f;
-//                     _stage = DECAY;
-//                 }
-//             }
-//             else{
-//                 _value = 1.0f;
-//                 _stage = DECAY;
-//             }
-//             break;
-
-//         case DECAY:
-//             _value -= deltaTime * (1.0f - _sustainLevel) / _decayTime;
-//             if (_value <= _sustainLevel) {
-//                 _value = _sustainLevel;
-//                 _stage = SUSTAIN;
-//             }
-//             break;
-
-//         case SUSTAIN:
-//             _value = _sustainLevel;
-//             if (_value <= 0.0f) {
-//                 _value = 0.0f;
-//                 _stage = IDLE;
-//             }
-//             break;
-
-//         case RELEASE:
-//             _value -= deltaTime * _sustainLevel / _releaseTime;
-//             if (_value <= 0.0f) {
-//                 _value = 0.0f;
-//                 _stage = IDLE;
-//             }
-//             break;
-
-//         case IDLE:
-//         default:
-//             _value = 0.0f;
-//             break;
-//     }
-// }
-
-// // --- Outputs
-// float EnvelopeBlock::getValue() {
-//     return _value;
-// }
+// --- Outputs
+float EnvelopeBlock::getValue() {
+    // If the envelope is running, return a snapshot state. 
+    // AudioEffectEnvelope uses isActive() to check state. If it's idle, it's 0.0f.
+    if (_envelope.isActive()) {
+        // Return 1.0f as placeholder if your core code checks binary state,
+        // or return the current target level depending on your EnvelopeBlock.h layout.
+        return 1.0f; 
+    }
+    return 0.0f;
+}
 
 AudioStream& EnvelopeBlock::input() {
     return _envelope;
 }
+
 AudioStream& EnvelopeBlock::output() {
     return _envelope;
 }
+
 // --- Parameter Setters
 void EnvelopeBlock::setAttackTime(float time) {
-     _attackTime = time;
-    // calculateRates();
-    _envelope.attack(time);
+    _attackTime = time;
+    // Teensy AudioEffectEnvelope accepts milliseconds
+    _envelope.attack(time * 1000.0f); 
 }
 
 void EnvelopeBlock::setDecayTime(float time) {
     _decayTime = time;
-    _envelope.decay(_decayTime);
-    //calculateRates();
+    _envelope.decay(time * 1000.0f);
 }
 
 void EnvelopeBlock::setSustainLevel(float level) {
     _sustainLevel = level;
-    _envelope.sustain(_sustainLevel);
+    _envelope.sustain(level);
 }
 
 void EnvelopeBlock::setReleaseTime(float time) {
     _releaseTime = time;
-    _envelope.release(_releaseTime);
-    //calculateRates();
+    _envelope.release(time * 1000.0f);
 }
 
 void EnvelopeBlock::setADSR(float attack, float decay, float sustain, float release) {
@@ -107,7 +57,3 @@ void EnvelopeBlock::setADSR(float attack, float decay, float sustain, float rele
     setSustainLevel(sustain);
     setReleaseTime(release);
 }
-
-// void EnvelopeBlock::calculateRates() {
-//     // No rate calculations needed with real-time delta applied
-// }

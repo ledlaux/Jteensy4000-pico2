@@ -1,5 +1,5 @@
 #pragma once
-#include <Audio.h>
+#include "Audio.h"
 
 // AmpBlock processes audio amplitude with modulation support
 class AmpBlock {

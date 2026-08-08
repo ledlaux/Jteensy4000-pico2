@@ -1,10 +1,19 @@
-#pragma once
+#ifndef PRESETS_H
+#define PRESETS_H
+
 #include <Arduino.h>
-#include "SynthEngine.h"
+#include "SynthEngine.h" 
+
+// Add this forward declaration here:
+class SynthEngine; 
+
+namespace Presets {
+    void loadInitTemplateByWave(SynthEngine& synth, uint8_t waveIndex);
+ 
 
 // Nine basic templates: OSC1 full mix, tuning mid, filter open no res,
 // drive=1, gain=1, ENV: A=0 D=0 S=1 R=0, no FX, no LFO.
-namespace Presets {
+
 
   // Load the “init” template for a given OSC1 waveform index (0..8).
   // Applies by sending CC values through SynthEngine::handleControlChange
@@ -41,3 +50,5 @@ const char* presets_nameByGlobalIndex(int globalIdx);
   // Optional: get a friendly name for UI/debug (“Init Saw”, etc.)
   const char* templateName(uint8_t idx);
 }
+
+#endif // PRESETS_H

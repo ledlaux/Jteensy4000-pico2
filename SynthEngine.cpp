@@ -19,7 +19,7 @@ using namespace CC;
  */
 
 SynthEngine::SynthEngine()
-    : _lfo1(), _lfo2(), _fxChain()
+    : _lfo1(), _lfo2() // _fxChain()
 {
     // =========================================================================
     // INITIALIZE VOICE STATE
@@ -73,15 +73,17 @@ SynthEngine::SynthEngine()
     // CREATE AUDIO CONNECTIONS - VOICES TO MIXERS
     // =========================================================================
     
-    // Connect voices 0-3 to sub-mixer A
-    for (int i = 0; i < 4; i++) {
-        _voicePatch[i] = new AudioConnection(_voices[i].output(), 0, _voiceMixerA, i);
-    }
+    // // Connect voices 0-3 to sub-mixer A
+    // for (int i = 0; i < 4; i++) {
+    //     _voicePatch[i] = new AudioConnection(_voices[i].output(), 0, _voiceMixerA, i);
+    // }
     
-    // Connect voices 4-7 to sub-mixer B  
-    for (int i = 4; i < 8; i++) {
-        _voicePatch[i] = new AudioConnection(_voices[i].output(), 0, _voiceMixerB, i - 4);
-    }
+    // // Connect voices 4-7 to sub-mixer B  
+    // for (int i = 4; i < 8; i++) {
+    //     _voicePatch[i] = new AudioConnection(_voices[i].output(), 0, _voiceMixerB, i - 4);
+    // }
+
+    _voicePatch[0] = new AudioConnection(_voices[0].output(), 0, _voiceMixerA, 0);
     
     // Connect sub-mixers to final mixer
     _patchMixerAToFinal = new AudioConnection(_voiceMixerA, 0, _voiceMixerFinal, 0);
@@ -160,14 +162,14 @@ SynthEngine::SynthEngine()
     _patchAmpModMixerToAmpMultiply   = new AudioConnection(_ampModMixer, 0, _ampMultiply, 0);
     _patchVoiceMixerToAmpMultiply    = new AudioConnection(_voiceMixerFinal, 0, _ampMultiply, 1);
 
-// Connect amp to JPFX (stereo)
-_fxPatchInL = new AudioConnection(_ampMultiply, 0, _fxChain.getJPFXInput(), 0);
-_fxPatchInR = new AudioConnection(_ampMultiply, 0, _fxChain.getJPFXInput(), 1);
+// // Connect amp to JPFX (stereo)
+// _fxPatchInL = new AudioConnection(_ampMultiply, 0, _fxChain.getJPFXInput(), 0);
+// _fxPatchInR = new AudioConnection(_ampMultiply, 0, _fxChain.getJPFXInput(), 1);
 
-// Connect amp dry to mixer (channel 0)
-_fxPatchDryL = new AudioConnection(_ampMultiply, 0, _fxChain.getOutputLeft(), 0);
-_fxPatchDryR = new AudioConnection(_ampMultiply, 0, _fxChain.getOutputRight(), 0);
-}
+// // Connect amp dry to mixer (channel 0)
+// _fxPatchDryL = new AudioConnection(_ampMultiply, 0, _fxChain.getOutputLeft(), 0);
+// _fxPatchDryR = new AudioConnection(_ampMultiply, 0, _fxChain.getOutputRight(), 0);
+ }
 
 static inline float CCtoTime(uint8_t cc) { return JT4000Map::cc_to_time_ms(cc); }
 
@@ -205,12 +207,12 @@ void SynthEngine::updateBPMSync() {
         _lfo2.setFrequency(hz);
     }
     
-    // Update delay if synced
-    TimingMode delayMode = _fxChain.getDelayTimingMode();
-    if (delayMode != TimingMode::TIMING_FREE) {
-        float ms = _bpmClock->getTimeForMode(delayMode);
-        _fxChain.setDelayTime(ms);
-    }
+    // // Update delay if synced
+    // TimingMode delayMode = _fxChain.getDelayTimingMode();
+    // if (delayMode != TimingMode::TIMING_FREE) {
+    //     float ms = _bpmClock->getTimeForMode(delayMode);
+    //     _fxChain.setDelayTime(ms);
+    // }
 }
 
 // ============================================================================
@@ -251,26 +253,26 @@ TimingMode SynthEngine::getLFO2TimingMode() const {
     return _lfo2.getTimingMode();
 }
 
-// ============================================================================
-// DELAY TIMING MODE CONTROLS
-// ============================================================================
+// // ============================================================================
+// // DELAY TIMING MODE CONTROLS
+// // ============================================================================
 
-void SynthEngine::setDelayTimingMode(TimingMode mode) {
-    _fxChain.setDelayTimingMode(mode);
+// void SynthEngine::setDelayTimingMode(TimingMode mode) {
+//     _fxChain.setDelayTimingMode(mode);
     
-    if (mode == TimingMode::TIMING_FREE) {
-        // Restore manual delay time control
-        _fxChain.setDelayTime(_fxDelayTime);
-    } else if (_bpmClock) {
-        // Lock to BPM
-        float ms = _bpmClock->getTimeForMode(mode);
-        _fxChain.setDelayTime(ms);
-    }
-}
+//     if (mode == TimingMode::TIMING_FREE) {
+//         // Restore manual delay time control
+//         _fxChain.setDelayTime(_fxDelayTime);
+//     } else if (_bpmClock) {
+//         // Lock to BPM
+//         float ms = _bpmClock->getTimeForMode(mode);
+//         _fxChain.setDelayTime(ms);
+//     }
+// }
 
-TimingMode SynthEngine::getDelayTimingMode() const {
-    return _fxChain.getDelayTimingMode();
-}
+// TimingMode SynthEngine::getDelayTimingMode() const {
+//     return _fxChain.getDelayTimingMode();
+// }
 
 
 
@@ -870,172 +872,172 @@ void SynthEngine::setVelocityEnvSens(float s) {
 // JPFX TONE CONTROL
 // ============================================================================
 
-void SynthEngine::setFXBassGain(float dB) {
-    _fxBassGain = dB;
-    _fxChain.setBassGain(dB);
-}
+// void SynthEngine::setFXBassGain(float dB) {
+//     _fxBassGain = dB;
+//     _fxChain.setBassGain(dB);
+// }
 
-void SynthEngine::setFXTrebleGain(float dB) {
-    _fxTrebleGain = dB;
-    _fxChain.setTrebleGain(dB);
-}
+// void SynthEngine::setFXTrebleGain(float dB) {
+//     _fxTrebleGain = dB;
+//     _fxChain.setTrebleGain(dB);
+// }
 
-float SynthEngine::getFXBassGain() const {
-    return _fxBassGain;
-}
+// float SynthEngine::getFXBassGain() const {
+//     return _fxBassGain;
+// }
 
-float SynthEngine::getFXTrebleGain() const {
-    return _fxTrebleGain;
-}
+// float SynthEngine::getFXTrebleGain() const {
+//     return _fxTrebleGain;
+// }
 
 // ============================================================================
 // JPFX MODULATION EFFECTS
 // ============================================================================
 
-void SynthEngine::setFXModEffect(int8_t variation) {
-    _fxModEffect = variation;
-    _fxChain.setModEffect(variation);
-}
+// void SynthEngine::setFXModEffect(int8_t variation) {
+//     _fxModEffect = variation;
+//     _fxChain.setModEffect(variation);
+// }
 
-void SynthEngine::setFXModMix(float mix) {
-    _fxModMix = mix;
-    _fxChain.setModMix(mix);
-}
+// void SynthEngine::setFXModMix(float mix) {
+//     _fxModMix = mix;
+//     _fxChain.setModMix(mix);
+// }
 
-void SynthEngine::setFXModRate(float hz) {
-    _fxModRate = hz;
-    _fxChain.setModRate(hz);
-}
+// void SynthEngine::setFXModRate(float hz) {
+//     _fxModRate = hz;
+//     _fxChain.setModRate(hz);
+// }
 
-void SynthEngine::setFXModFeedback(float fb) {
-    _fxModFeedback = fb;
-    _fxChain.setModFeedback(fb);
-}
+// void SynthEngine::setFXModFeedback(float fb) {
+//     _fxModFeedback = fb;
+//     _fxChain.setModFeedback(fb);
+// // }
 
-int8_t SynthEngine::getFXModEffect() const {
-    return _fxModEffect;
-}
+// int8_t SynthEngine::getFXModEffect() const {
+//     return _fxModEffect;
+// }
 
-float SynthEngine::getFXModMix() const {
-    return _fxModMix;
-}
+// float SynthEngine::getFXModMix() const {
+//     return _fxModMix;
+// }
 
-float SynthEngine::getFXModRate() const {
-    return _fxModRate;
-}
+// float SynthEngine::getFXModRate() const {
+//     return _fxModRate;
+// }
 
-float SynthEngine::getFXModFeedback() const {
-    return _fxModFeedback;
-}
+// float SynthEngine::getFXModFeedback() const {
+//     return _fxModFeedback;
+// }
 
-const char* SynthEngine::getFXModEffectName() const {
-    return _fxChain.getModEffectName();
-}
+// const char* SynthEngine::getFXModEffectName() const {
+//     return _fxChain.getModEffectName();
+// }
 
-// ============================================================================
-// JPFX DELAY EFFECTS
-// ============================================================================
+// // ============================================================================
+// // JPFX DELAY EFFECTS
+// // ============================================================================
 
-void SynthEngine::setFXDelayEffect(int8_t variation) {
-    _fxDelayEffect = variation;
-    _fxChain.setDelayEffect(variation);
-}
+// void SynthEngine::setFXDelayEffect(int8_t variation) {
+//     _fxDelayEffect = variation;
+//     _fxChain.setDelayEffect(variation);
+// }
 
-void SynthEngine::setFXDelayMix(float mix) {
-    _fxDelayMix = mix;
-    _fxChain.setDelayMix(mix);
-}
+// void SynthEngine::setFXDelayMix(float mix) {
+//     _fxDelayMix = mix;
+//     _fxChain.setDelayMix(mix);
+// }
 
-void SynthEngine::setFXDelayFeedback(float fb) {
-    _fxDelayFeedback = fb;
-    _fxChain.setDelayFeedback(fb);
-}
+// void SynthEngine::setFXDelayFeedback(float fb) {
+//     _fxDelayFeedback = fb;
+//     _fxChain.setDelayFeedback(fb);
+// }
 
-void SynthEngine::setFXDelayTime(float ms) {
-    _fxDelayTime = ms;
-    _fxChain.setDelayTime(ms);
-}
+// void SynthEngine::setFXDelayTime(float ms) {
+//     _fxDelayTime = ms;
+//     _fxChain.setDelayTime(ms);
+// }
 
-int8_t SynthEngine::getFXDelayEffect() const {
-    return _fxDelayEffect;
-}
+// int8_t SynthEngine::getFXDelayEffect() const {
+//     return _fxDelayEffect;
+// }
 
-float SynthEngine::getFXDelayMix() const {
-    return _fxDelayMix;
-}
+// float SynthEngine::getFXDelayMix() const {
+//     return _fxDelayMix;
+// }
 
-float SynthEngine::getFXDelayFeedback() const {
-    return _fxDelayFeedback;
-}
+// float SynthEngine::getFXDelayFeedback() const {
+//     return _fxDelayFeedback;
+// }
 
-float SynthEngine::getFXDelayTime() const {
-    return _fxDelayTime;
-}
+// float SynthEngine::getFXDelayTime() const {
+//     return _fxDelayTime;
+// }
 
-const char* SynthEngine::getFXDelayEffectName() const {
-    return _fxChain.getDelayEffectName();
-}
+// const char* SynthEngine::getFXDelayEffectName() const {
+//     return _fxChain.getDelayEffectName();
+// }
 
 // ============================================================================
 // JPFX DRY MIX
 // ============================================================================
 
-void SynthEngine::setFXDryMix(float level) {
-    _fxDryMix = level;
-    _fxChain.setDryMix(level, level); // Stereo
-}
+// void SynthEngine::setFXDryMix(float level) {
+//     _fxDryMix = level;
+//     _fxChain.setDryMix(level, level); // Stereo
+// }
 
-float SynthEngine::getFXDryMix() const {
-    return _fxDryMix;
-}
+// float SynthEngine::getFXDryMix() const {
+//     return _fxDryMix;
+// }
 
-void SynthEngine::setFXReverbRoomSize(float size) {
-    _fxReverbRoomSize = size;
-    _fxChain.setReverbRoomSize(size);
-}
+// void SynthEngine::setFXReverbRoomSize(float size) {
+//     _fxReverbRoomSize = size;
+//     _fxChain.setReverbRoomSize(size);
+// }
 
-void SynthEngine::setFXReverbHiDamping(float damp) {
-    _fxReverbHiDamp = damp;
-    _fxChain.setReverbHiDamping(damp);
-}
+// void SynthEngine::setFXReverbHiDamping(float damp) {
+//     _fxReverbHiDamp = damp;
+//     _fxChain.setReverbHiDamping(damp);
+// }
 
-void SynthEngine::setFXReverbLoDamping(float damp) {
-    _fxReverbLoDamp = damp;
-    _fxChain.setReverbLoDamping(damp);
-}
+// void SynthEngine::setFXReverbLoDamping(float damp) {
+//     _fxReverbLoDamp = damp;
+//     _fxChain.setReverbLoDamping(damp);
+// }
 
-void SynthEngine::setFXJPFXMix(float left, float right) {
-    _fxJPFXMixL = left;
-    _fxJPFXMixR = right;
-    _fxChain.setJPFXMix(left, right);
-}
+// void SynthEngine::setFXJPFXMix(float left, float right) {
+//     _fxJPFXMixL = left;
+//     _fxJPFXMixR = right;
+//     _fxChain.setJPFXMix(left, right);
+// }
 
-void SynthEngine::setFXReverbMix(float left, float right) {
-    _fxReverbMixL = left;
-    _fxReverbMixR = right;
-    _fxChain.setReverbMix(left, right);
-}
+// void SynthEngine::setFXReverbMix(float left, float right) {
+//     _fxReverbMixL = left;
+//     _fxReverbMixR = right;
+//     _fxChain.setReverbMix(left, right);
+// }
 
-// Getters
-float SynthEngine::getFXReverbRoomSize() const { return _fxReverbRoomSize; }
-float SynthEngine::getFXReverbHiDamping() const { return _fxReverbHiDamp; }
-float SynthEngine::getFXReverbLoDamping() const { return _fxReverbLoDamp; }
-float SynthEngine::getFXJPFXMixL() const { return _fxJPFXMixL; }
-float SynthEngine::getFXJPFXMixR() const { return _fxJPFXMixR; }
-float SynthEngine::getFXReverbMixL() const { return _fxReverbMixL; }
-float SynthEngine::getFXReverbMixR() const { return _fxReverbMixR; }
+// // Getters
+// float SynthEngine::getFXReverbRoomSize() const { return _fxReverbRoomSize; }
+// float SynthEngine::getFXReverbHiDamping() const { return _fxReverbHiDamp; }
+// float SynthEngine::getFXReverbLoDamping() const { return _fxReverbLoDamp; }
+// float SynthEngine::getFXJPFXMixL() const { return _fxJPFXMixL; }
+// float SynthEngine::getFXJPFXMixR() const { return _fxJPFXMixR; }
+// float SynthEngine::getFXReverbMixL() const { return _fxReverbMixL; }
+// float SynthEngine::getFXReverbMixR() const { return _fxReverbMixR; }
 
-// ============================================================================
-// FX REVERB BYPASS CONTROL (NEW - CPU Optimization)
-// ============================================================================
+// // ============================================================================
+// // FX REVERB BYPASS CONTROL (NEW - CPU Optimization)
+// // ============================================================================
 
-void SynthEngine::setFXReverbBypass(bool bypass) {
-    _fxChain.setReverbBypass(bypass);
-}
+// void SynthEngine::setFXReverbBypass(bool bypass) {
+//     _fxChain.setReverbBypass(bypass);
+// }
 
-bool SynthEngine::getFXReverbBypass() const {
-    return _fxChain.getReverbBypass();
-}
+// bool SynthEngine::getFXReverbBypass() const {
+//     return _fxChain.getReverbBypass();
+// }
 
 
 
@@ -1293,134 +1295,134 @@ void SynthEngine::handleControlChange(byte /*channel*/, byte control, byte value
         // ============================================================================
 
 
-        // --- JPFX Tone Control ---
-        case CC::FX_BASS_GAIN: {
-            float dB = (norm * 24.0f) - 12.0f; // 0..1 → -12..+12 dB
-            setFXBassGain(dB);
-            JT_LOGF("[CC %u:%s] Bass = %.1f dB\n", control, ccName, dB);
-        } break;
+//         // --- JPFX Tone Control ---
+//         case CC::FX_BASS_GAIN: {
+//             float dB = (norm * 24.0f) - 12.0f; // 0..1 → -12..+12 dB
+//             setFXBassGain(dB);
+//             JT_LOGF("[CC %u:%s] Bass = %.1f dB\n", control, ccName, dB);
+//         } break;
 
-        case CC::FX_TREBLE_GAIN: {
-            float dB = (norm * 24.0f) - 12.0f; // 0..1 → -12..+12 dB
-            setFXTrebleGain(dB);
-            JT_LOGF("[CC %u:%s] Treble = %.1f dB\n", control, ccName, dB);
-        } break;
+//         case CC::FX_TREBLE_GAIN: {
+//             float dB = (norm * 24.0f) - 12.0f; // 0..1 → -12..+12 dB
+//             setFXTrebleGain(dB);
+//             JT_LOGF("[CC %u:%s] Treble = %.1f dB\n", control, ccName, dB);
+//         } break;
 
-        // --- JPFX Modulation Effects ---
-        case CC::FX_MOD_EFFECT: {
-            // Map CC 0..127 to -1..10 (off + 11 variations)
-            int8_t variation = -1;
-            if (value > 0) {
-                // Map 1..127 evenly across 0..10
-                variation = ((uint16_t)(value - 1) * 11) / 127;
-                if (variation > 10) variation = 10;
-            }
-            setFXModEffect(variation);
-            JT_LOGF("[CC %u:%s] Mod Effect = %d (%s)\n", 
-                    control, ccName, variation, getFXModEffectName());
-        } break;
+//         // --- JPFX Modulation Effects ---
+//         case CC::FX_MOD_EFFECT: {
+//             // Map CC 0..127 to -1..10 (off + 11 variations)
+//             int8_t variation = -1;
+//             if (value > 0) {
+//                 // Map 1..127 evenly across 0..10
+//                 variation = ((uint16_t)(value - 1) * 11) / 127;
+//                 if (variation > 10) variation = 10;
+//             }
+//             setFXModEffect(variation);
+//             JT_LOGF("[CC %u:%s] Mod Effect = %d (%s)\n", 
+//                     control, ccName, variation, getFXModEffectName());
+//         } break;
 
-        case CC::FX_MOD_MIX: {
-            setFXModMix(norm);
-            JT_LOGF("[CC %u:%s] Mod Mix = %.3f\n", control, ccName, norm);
-        } break;
+//         case CC::FX_MOD_MIX: {
+//             setFXModMix(norm);
+//             JT_LOGF("[CC %u:%s] Mod Mix = %.3f\n", control, ccName, norm);
+//         } break;
 
-        case CC::FX_MOD_RATE: {
-            float hz = norm * 20.0f; // 0..1 → 0..20 Hz
-            setFXModRate(hz);
-            JT_LOGF("[CC %u:%s] Mod Rate = %.2f Hz\n", control, ccName, hz);
-        } break;
+//         case CC::FX_MOD_RATE: {
+//             float hz = norm * 20.0f; // 0..1 → 0..20 Hz
+//             setFXModRate(hz);
+//             JT_LOGF("[CC %u:%s] Mod Rate = %.2f Hz\n", control, ccName, hz);
+//         } break;
 
-        case CC::FX_MOD_FEEDBACK: {
-            // Map CC 0..127 to -1..0.99 (0 = use preset)
-            float fb = -1.0f;
-            if (value > 0) {
-                fb = ((value - 1) / 126.0f) * 0.99f;
-            }
-            setFXModFeedback(fb);
-            JT_LOGF("[CC %u:%s] Mod FB = %.3f\n", control, ccName, fb);
-        } break;
+//         case CC::FX_MOD_FEEDBACK: {
+//             // Map CC 0..127 to -1..0.99 (0 = use preset)
+//             float fb = -1.0f;
+//             if (value > 0) {
+//                 fb = ((value - 1) / 126.0f) * 0.99f;
+//             }
+//             setFXModFeedback(fb);
+//             JT_LOGF("[CC %u:%s] Mod FB = %.3f\n", control, ccName, fb);
+//         } break;
 
-        // --- JPFX Delay Effects ---
-        case CC::FX_JPFX_DELAY_EFFECT: {
-            // Map CC 0..127 to -1..4 (off + 5 variations)
-            int8_t variation = -1;
-            if (value > 0) {
-                variation = ((uint16_t)(value - 1) * 5) / 127;
-                if (variation > 4) variation = 4;
-            }
-            setFXDelayEffect(variation);
-            JT_LOGF("[CC %u:%s] Delay Effect = %d (%s)\n", 
-                    control, ccName, variation, getFXDelayEffectName());
-        } break;
+//         // --- JPFX Delay Effects ---
+//         case CC::FX_JPFX_DELAY_EFFECT: {
+//             // Map CC 0..127 to -1..4 (off + 5 variations)
+//             int8_t variation = -1;
+//             if (value > 0) {
+//                 variation = ((uint16_t)(value - 1) * 5) / 127;
+//                 if (variation > 4) variation = 4;
+//             }
+//             setFXDelayEffect(variation);
+//             JT_LOGF("[CC %u:%s] Delay Effect = %d (%s)\n", 
+//                     control, ccName, variation, getFXDelayEffectName());
+//         } break;
 
-        case CC::FX_JPFX_DELAY_MIX: {
-            setFXDelayMix(norm);
-            JT_LOGF("[CC %u:%s] Delay Mix = %.3f\n", control, ccName, norm);
-        } break;
+//         case CC::FX_JPFX_DELAY_MIX: {
+//             setFXDelayMix(norm);
+//             JT_LOGF("[CC %u:%s] Delay Mix = %.3f\n", control, ccName, norm);
+//         } break;
 
-        case CC::FX_JPFX_DELAY_FEEDBACK: {
-            // Map CC 0..127 to -1..0.99 (0 = use preset)
-            float fb = -1.0f;
-            if (value > 0) {
-                fb = ((value - 1) / 126.0f) * 0.99f;
-            }
-            setFXDelayFeedback(fb);
-            JT_LOGF("[CC %u:%s] Delay FB = %.3f\n", control, ccName, fb);
-        } break;
+//         case CC::FX_JPFX_DELAY_FEEDBACK: {
+//             // Map CC 0..127 to -1..0.99 (0 = use preset)
+//             float fb = -1.0f;
+//             if (value > 0) {
+//                 fb = ((value - 1) / 126.0f) * 0.99f;
+//             }
+//             setFXDelayFeedback(fb);
+//             JT_LOGF("[CC %u:%s] Delay FB = %.3f\n", control, ccName, fb);
+//         } break;
 
-        case CC::FX_JPFX_DELAY_TIME: {
-            float ms = norm * 1500.0f; // 0..1 → 0..1500 ms
-            setFXDelayTime(ms);
-            JT_LOGF("[CC %u:%s] Delay Time = %.1f ms\n", control, ccName, ms);
-        } break;
+//         case CC::FX_JPFX_DELAY_TIME: {
+//             float ms = norm * 1500.0f; // 0..1 → 0..1500 ms
+//             setFXDelayTime(ms);
+//             JT_LOGF("[CC %u:%s] Delay Time = %.1f ms\n", control, ccName, ms);
+//         } break;
 
-        // --- JPFX Dry Mix ---
-        case CC::FX_DRY_MIX: {
-            setFXDryMix(norm);
-            JT_LOGF("[CC %u:%s] Dry Mix = %.3f\n", control, ccName, norm);
-        } break;
-        case CC::FX_REVERB_SIZE: {
-    setFXReverbRoomSize(norm);
-    JT_LOGF("[CC %u:%s] Reverb Size = %.3f\n", control, ccName, norm);
-} break;
+//         // --- JPFX Dry Mix ---
+//         case CC::FX_DRY_MIX: {
+//             setFXDryMix(norm);
+//             JT_LOGF("[CC %u:%s] Dry Mix = %.3f\n", control, ccName, norm);
+//         } break;
+//         case CC::FX_REVERB_SIZE: {
+//     setFXReverbRoomSize(norm);
+//     JT_LOGF("[CC %u:%s] Reverb Size = %.3f\n", control, ccName, norm);
+// } break;
 
-case CC::FX_REVERB_DAMP: {
-    setFXReverbHiDamping(norm);
-    JT_LOGF("[CC %u:%s] Reverb HiDamp = %.3f\n", control, ccName, norm);
-} break;
+// case CC::FX_REVERB_DAMP: {
+//     setFXReverbHiDamping(norm);
+//     JT_LOGF("[CC %u:%s] Reverb HiDamp = %.3f\n", control, ccName, norm);
+// } break;
 
-case CC::FX_REVERB_LODAMP: {
-    setFXReverbLoDamping(norm);
-    JT_LOGF("[CC %u:%s] Reverb LoDamp = %.3f\n", control, ccName, norm);
-} break;
+// case CC::FX_REVERB_LODAMP: {
+//     setFXReverbLoDamping(norm);
+//     JT_LOGF("[CC %u:%s] Reverb LoDamp = %.3f\n", control, ccName, norm);
+// } break;
 
-case CC::FX_REVERB_MIX: {
-    setFXReverbMix(norm, norm);  // Stereo
-    JT_LOGF("[CC %u:%s] Reverb Mix = %.3f\n", control, ccName, norm);
-} break;
+// case CC::FX_REVERB_MIX: {
+//     setFXReverbMix(norm, norm);  // Stereo
+//     JT_LOGF("[CC %u:%s] Reverb Mix = %.3f\n", control, ccName, norm);
+// } break;
 
-// ============================================================================
-// NEW CC HANDLERS FOR FX MIX CONTROLS
-// ============================================================================
+// // ============================================================================
+// // NEW CC HANDLERS FOR FX MIX CONTROLS
+// // ============================================================================
 
-case CC::FX_JPFX_MIX: {
-    // FX_JPFX_MIX controls the JPFX output level (bypasses reverb)
-    // This is the "JPFX Mix" control on Page 19
-    float mix = norm;  // norm is already calculated from CC value
-    setFXJPFXMix(mix, mix);  // Set both L and R channels
-    JT_LOGF("[CC %u:%s] JPFX Mix = %.3f\n", control, ccName, mix);
-    if (_notify) _notify(control, value);
-} break;
+// case CC::FX_JPFX_MIX: {
+//     // FX_JPFX_MIX controls the JPFX output level (bypasses reverb)
+//     // This is the "JPFX Mix" control on Page 19
+//     float mix = norm;  // norm is already calculated from CC value
+//     setFXJPFXMix(mix, mix);  // Set both L and R channels
+//     JT_LOGF("[CC %u:%s] JPFX Mix = %.3f\n", control, ccName, mix);
+//     if (_notify) _notify(control, value);
+// } break;
 
-case CC::FX_REVERB_BYPASS: {
-    // FX_REVERB_BYPASS toggles reverb on/off for CPU savings
-    // Values > 63 = bypassed, <= 63 = active
-    bool bypass = (value > 63);
-    setFXReverbBypass(bypass);
-    JT_LOGF("[CC %u:%s] Reverb Bypass = %s\n", control, ccName, bypass ? "ON" : "OFF");
-    if (_notify) _notify(control, value);
-} break;
+// case CC::FX_REVERB_BYPASS: {
+//     // FX_REVERB_BYPASS toggles reverb on/off for CPU savings
+//     // Values > 63 = bypassed, <= 63 = active
+//     bool bypass = (value > 63);
+//     setFXReverbBypass(bypass);
+//     JT_LOGF("[CC %u:%s] Reverb Bypass = %s\n", control, ccName, bypass ? "ON" : "OFF");
+//     if (_notify) _notify(control, value);
+// } break;
 
 
         // ------------------- Supersaw / DC / Ring -------------------
@@ -1588,27 +1590,27 @@ case CC::LFO2_TIMING_MODE: {
     break;
 }
 
-case CC::DELAY_TIMING_MODE: {
-    // Same mapping as LFOs
-    TimingMode mode = TimingMode::TIMING_FREE;
-    if (value >= 0 && value <= 10)       mode = TimingMode::TIMING_FREE;
-    else if (value >= 11 && value <= 21) mode = TimingMode::TIMING_4_BARS;
-    else if (value >= 22 && value <= 32) mode = TimingMode::TIMING_2_BARS;
-    else if (value >= 33 && value <= 43) mode = TimingMode::TIMING_1_BAR;
-    else if (value >= 44 && value <= 54) mode = TimingMode::TIMING_1_2;
-    else if (value >= 55 && value <= 65) mode = TimingMode::TIMING_1_4;
-    else if (value >= 66 && value <= 76) mode = TimingMode::TIMING_1_8;
-    else if (value >= 77 && value <= 87) mode = TimingMode::TIMING_1_16;
-    else if (value >= 88 && value <= 98) mode = TimingMode::TIMING_1_32;
-    else if (value >= 99 && value <= 109) mode = TimingMode::TIMING_1_4T;
-    else if (value >= 110 && value <= 120) mode = TimingMode::TIMING_1_8T;
-    else if (value >= 121 && value <= 127) mode = TimingMode::TIMING_1_16T;
+// case CC::DELAY_TIMING_MODE: {
+//     // Same mapping as LFOs
+//     TimingMode mode = TimingMode::TIMING_FREE;
+//     if (value >= 0 && value <= 10)       mode = TimingMode::TIMING_FREE;
+//     else if (value >= 11 && value <= 21) mode = TimingMode::TIMING_4_BARS;
+//     else if (value >= 22 && value <= 32) mode = TimingMode::TIMING_2_BARS;
+//     else if (value >= 33 && value <= 43) mode = TimingMode::TIMING_1_BAR;
+//     else if (value >= 44 && value <= 54) mode = TimingMode::TIMING_1_2;
+//     else if (value >= 55 && value <= 65) mode = TimingMode::TIMING_1_4;
+//     else if (value >= 66 && value <= 76) mode = TimingMode::TIMING_1_8;
+//     else if (value >= 77 && value <= 87) mode = TimingMode::TIMING_1_16;
+//     else if (value >= 88 && value <= 98) mode = TimingMode::TIMING_1_32;
+//     else if (value >= 99 && value <= 109) mode = TimingMode::TIMING_1_4T;
+//     else if (value >= 110 && value <= 120) mode = TimingMode::TIMING_1_8T;
+//     else if (value >= 121 && value <= 127) mode = TimingMode::TIMING_1_16T;
     
-    setDelayTimingMode(mode);
-    JT_LOGF("[CC %u:%s] Delay Timing = %s\n", 
-            control, ccName, TimingModeNames[(int)mode]);
-    break;
-}
+//     setDelayTimingMode(mode);
+//     JT_LOGF("[CC %u:%s] Delay Timing = %s\n", 
+//             control, ccName, TimingModeNames[(int)mode]);
+//     break;
+// }
 
 
 
