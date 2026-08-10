@@ -14,9 +14,9 @@ https://github.com/ghostintranslation/pico-audio
 
 **What is not working:**
 
-* sound is distorted
+* gui code stripped
+* fx section disabled
 * code needs to be optimized
-* device needs to be overclocked (300mhz+) which is not tested yet
 
 
 
