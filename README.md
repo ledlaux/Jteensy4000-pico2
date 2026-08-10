@@ -17,6 +17,7 @@ https://github.com/ghostintranslation/pico-audio
 **What is not working:**
 
 * sound is not optimal
+* random crashes
 * polyphony
 * lfo
 * gui code stripped
