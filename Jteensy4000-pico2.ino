@@ -23,10 +23,11 @@ int16_t audioBuffer[AUDIO_BLOCK_SAMPLES * 2];
 
 volatile bool audioReady = false;
 
-// Thread-safe event structure for MIDI messages from Core 0 -> Core 1
+// Thread-safe event structure updated to include channel
 enum MidiEventType { EVENT_NOTE_ON, EVENT_NOTE_OFF, EVENT_CC, EVENT_PROGRAM_CHANGE };
 struct MidiEvent {
   MidiEventType type;
+  uint8_t channel;
   uint8_t data1;
   uint8_t data2;
 };
@@ -70,9 +71,6 @@ void SynthEngine::handleProgramChange(uint8_t channel, uint8_t program) {
 #include "hardware/clocks.h"
 
 void setup() {
-//  vreg_set_voltage(VREG_VOLTAGE_1_30);
-//  set_sys_clock_khz(380000, true);
-  
   // Initialize thread-safe queue for up to 32 pending MIDI events
   queue_init(&midiEventQueue, sizeof(MidiEvent), 32);
 
@@ -88,24 +86,24 @@ void setup() {
 
   Serial.begin(115200);
 
-  // Core 0 MIDI Callbacks: Push events safely to the queue instead of mutating synth directly
+  // Core 0 MIDI Callbacks: Capture channel, data1, and data2 safely into the queue
   MIDI.setHandleNoteOn([](byte ch, byte note, byte vel){
-    MidiEvent ev = {EVENT_NOTE_ON, note, vel};
+    MidiEvent ev = {EVENT_NOTE_ON, ch, note, vel};
     queue_try_add(&midiEventQueue, &ev);
   });
   
   MIDI.setHandleNoteOff([](byte ch, byte note, byte vel){
-    MidiEvent ev = {EVENT_NOTE_OFF, note, vel};
+    MidiEvent ev = {EVENT_NOTE_OFF, ch, note, vel};
     queue_try_add(&midiEventQueue, &ev);
   });
 
   MIDI.setHandleProgramChange([](byte ch, byte program){
-    MidiEvent ev = {EVENT_PROGRAM_CHANGE, (uint8_t)(ch - 1), program};
+    MidiEvent ev = {EVENT_PROGRAM_CHANGE, ch, 0, program};
     queue_try_add(&midiEventQueue, &ev);
   });
   
   MIDI.setHandleControlChange([](byte ch, byte num, byte val){
-    MidiEvent ev = {EVENT_CC, num, val};
+    MidiEvent ev = {EVENT_CC, ch, num, val};
     queue_try_add(&midiEventQueue, &ev);
   });
 
@@ -115,6 +113,8 @@ void setup() {
   synth.setOsc1Mix(0.2f);
   synth.setOsc2Mix(0.2f);
   synth.setFilterResonance(0.0f); 
+  synth.handleControlChange(1, 65, 0);
+  synth.handleControlChange(1, 5, 0); // Disable glide/portamento
 
   audioReady = true;
 }
@@ -154,15 +154,15 @@ void loop1() {
         synth.noteOff(ev.data1);
         break;
       case EVENT_PROGRAM_CHANGE:
-        synth.handleProgramChange(ev.data1, ev.data2);
+        synth.handleProgramChange(ev.channel, ev.data2);
         break;
       case EVENT_CC:
+        synth.handleControlChange(ev.channel, ev.data1, ev.data2);
         break;
     }
   }
 
   // 2. Lock audio generation strictly to the I2S hardware write pace.
-  // This ensures synth.update() and update_all() run EXACTLY once per audio block (~2.9ms at 44.1kHz).
   if (i2sOutput.availableForWrite() >= sizeof(audioBuffer)) {
     synth.update();
     bridgeNode.updateGraph();
