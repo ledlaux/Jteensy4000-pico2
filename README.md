@@ -11,9 +11,13 @@ https://github.com/ghostintranslation/pico-audio
 * sound generation 
 * output using i2s (pcm5102)
 * preset switching
+* filter
+* midi cc
 
 **What is not working:**
 
+* polyphony
+* lfo
 * gui code stripped
 * fx section disabled
 * code needs to be optimized
