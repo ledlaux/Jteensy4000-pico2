@@ -18,7 +18,7 @@ SynthEngine synth;
 BPMClockManager bpmClock;
 I2S i2sOutput(OUTPUT);
 
-const int SAMPLE_RATE = 44100;
+const int SAMPLE_RATE = 22050;
 int16_t audioBuffer[AUDIO_BLOCK_SAMPLES * 2]; 
 
 volatile bool audioReady = false;
@@ -119,7 +119,6 @@ void setup() {
   audioReady = true;
 }
 
-// Core 0: Dedicated entirely to USB housekeeping and MIDI polling
 void loop() {
   tud_task();      
   MIDI.read();     
@@ -141,9 +140,8 @@ void setup1() {
   }
 }
 
-// Core 1: Dedicated entirely to Audio, Synth Engine, and I2S hardware write
-void loop1() {
-  // 1. Process any pending MIDI events safely on Core 1 before updating the synth
+
+void __not_in_flash_func(loop1)() {
   MidiEvent ev;
   while (queue_try_remove(&midiEventQueue, &ev)) {
     switch (ev.type) {
@@ -162,7 +160,6 @@ void loop1() {
     }
   }
 
-  // 2. Lock audio generation strictly to the I2S hardware write pace.
   if (i2sOutput.availableForWrite() >= sizeof(audioBuffer)) {
     synth.update();
     bridgeNode.updateGraph();
