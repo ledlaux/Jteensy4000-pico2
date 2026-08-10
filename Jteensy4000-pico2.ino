@@ -5,6 +5,7 @@
 #include "Audio.h"             
 #include "SynthEngine.h"
 #include "BPMClockManager.h"
+#include "pico/util/queue.h"   // RP2350 SDK thread-safe queue
 
 #ifndef USB_PRODUCT
 #define USB_PRODUCT "JTeensy RP2350 Synth"
@@ -15,14 +16,22 @@ MIDI_CREATE_INSTANCE(Adafruit_USBD_MIDI, usb_midi, MIDI);
 
 SynthEngine synth;
 BPMClockManager bpmClock;
-
 I2S i2sOutput(OUTPUT);
 
 const int SAMPLE_RATE = 44100;
-const int BUFFER_SIZE = 64;
-int16_t audioBuffer[BUFFER_SIZE * 2]; 
+int16_t audioBuffer[AUDIO_BLOCK_SAMPLES * 2]; 
 
 volatile bool audioReady = false;
+
+// Thread-safe event structure for MIDI messages from Core 0 -> Core 1
+enum MidiEventType { EVENT_NOTE_ON, EVENT_NOTE_OFF, EVENT_CC, EVENT_PROGRAM_CHANGE };
+struct MidiEvent {
+  MidiEventType type;
+  uint8_t data1;
+  uint8_t data2;
+};
+
+queue_t midiEventQueue;
 
 class I2SBridgeNode : public AudioStream {
 public:
@@ -36,7 +45,7 @@ public:
     audio_block_t *block = receiveReadOnly(0);
 
     if (block) {
-      for (int i = 0; i < BUFFER_SIZE; i++) {
+      for (int i = 0; i < AUDIO_BLOCK_SAMPLES; i++) {
         audioBuffer[i * 2]     = block->data[i];
         audioBuffer[i * 2 + 1] = block->data[i];
       }
@@ -51,7 +60,6 @@ private:
 };
 
 I2SBridgeNode bridgeNode;
-
 AudioConnection patchCord1(synth.getVoiceMixer(), 0, bridgeNode, 0);
 
 void SynthEngine::handleProgramChange(uint8_t channel, uint8_t program) {
@@ -62,9 +70,12 @@ void SynthEngine::handleProgramChange(uint8_t channel, uint8_t program) {
 #include "hardware/clocks.h"
 
 void setup() {
+//  vreg_set_voltage(VREG_VOLTAGE_1_30);
+//  set_sys_clock_khz(380000, true);
+  
+  // Initialize thread-safe queue for up to 32 pending MIDI events
+  queue_init(&midiEventQueue, sizeof(MidiEvent), 32);
 
-  vreg_set_voltage(VREG_VOLTAGE_1_30);
-  set_sys_clock_khz(330000, true);
   AudioMemory(60);
 
   usb_midi.setStringDescriptor(USB_PRODUCT);
@@ -77,37 +88,28 @@ void setup() {
 
   Serial.begin(115200);
 
+  // Core 0 MIDI Callbacks: Push events safely to the queue instead of mutating synth directly
   MIDI.setHandleNoteOn([](byte ch, byte note, byte vel){
-    Serial.print("CORE0 NoteOn Recv -> Note: ");
-    Serial.print(note);
-    Serial.print(" Vel: ");
-    Serial.println(vel);
-    __dmb();
-    synth.noteOn(note, vel / 127.0f);
-    __dmb();
+    MidiEvent ev = {EVENT_NOTE_ON, note, vel};
+    queue_try_add(&midiEventQueue, &ev);
   });
   
   MIDI.setHandleNoteOff([](byte ch, byte note, byte vel){
-    Serial.println("CORE0 NoteOff Recv");
-    __dmb();
-    synth.noteOff(note);
-    __dmb();
+    MidiEvent ev = {EVENT_NOTE_OFF, note, vel};
+    queue_try_add(&midiEventQueue, &ev);
   });
 
   MIDI.setHandleProgramChange([](byte ch, byte program){
-    __dmb();
-    synth.handleProgramChange(ch - 1, program);
-    __dmb();
+    MidiEvent ev = {EVENT_PROGRAM_CHANGE, (uint8_t)(ch - 1), program};
+    queue_try_add(&midiEventQueue, &ev);
   });
   
   MIDI.setHandleControlChange([](byte ch, byte num, byte val){
-    __dmb();
-    synth.handleControlChange(ch - 1, num, val);
-    __dmb();
+    MidiEvent ev = {EVENT_CC, num, val};
+    queue_try_add(&midiEventQueue, &ev);
   });
 
   MIDI.begin(MIDI_CHANNEL_OMNI);
-  
   delay(100);
   
   synth.setOsc1Mix(0.2f);
@@ -117,10 +119,10 @@ void setup() {
   audioReady = true;
 }
 
+// Core 0: Dedicated entirely to USB housekeeping and MIDI polling
 void loop() {
   tud_task();      
   MIDI.read();     
-  synth.update(); 
 }
 
 void setup1() {
@@ -139,11 +141,31 @@ void setup1() {
   }
 }
 
+// Core 1: Dedicated entirely to Audio, Synth Engine, and I2S hardware write
 void loop1() {
-  __dmb();
-  bridgeNode.updateGraph();
-  // Only write when the I2S hardware actually has room for this block
+  // 1. Process any pending MIDI events safely on Core 1 before updating the synth
+  MidiEvent ev;
+  while (queue_try_remove(&midiEventQueue, &ev)) {
+    switch (ev.type) {
+      case EVENT_NOTE_ON:
+        synth.noteOn(ev.data1, ev.data2 / 127.0f);
+        break;
+      case EVENT_NOTE_OFF:
+        synth.noteOff(ev.data1);
+        break;
+      case EVENT_PROGRAM_CHANGE:
+        synth.handleProgramChange(ev.data1, ev.data2);
+        break;
+      case EVENT_CC:
+        break;
+    }
+  }
+
+  // 2. Lock audio generation strictly to the I2S hardware write pace.
+  // This ensures synth.update() and update_all() run EXACTLY once per audio block (~2.9ms at 44.1kHz).
   if (i2sOutput.availableForWrite() >= sizeof(audioBuffer)) {
+    synth.update();
+    bridgeNode.updateGraph();
     i2sOutput.write((uint8_t*)audioBuffer, sizeof(audioBuffer));
   }
 }
