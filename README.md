@@ -16,11 +16,13 @@ https://github.com/ghostintranslation/pico-audio
 
 **What is not working:**
 
+* sound is not optimal
 * polyphony
 * lfo
 * gui code stripped
 * fx section disabled
 * code needs to be optimized
+* device needs to be overclocked to 300mhz+ (not tested)
 
 
 
