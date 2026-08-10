@@ -10,6 +10,7 @@ https://github.com/ghostintranslation/pico-audio
 * multicore
 * sound generation 
 * output using i2s (pcm5102)
+* preset switching
 
 **What is not working:**
 
